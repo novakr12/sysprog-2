@@ -1,7 +1,7 @@
 using System.Net;
-using Sysprog1.Services;
+using Sysprog2.Services;
 
-namespace Sysprog1
+namespace Sysprog2
 {
     class Program
     {

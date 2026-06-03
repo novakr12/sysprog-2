@@ -1,7 +1,7 @@
 using System.Net;
 using System.Threading;
 
-namespace Sysprog1.Services
+namespace Sysprog2.Services
 {
     public class RequestQueue
     {

@@ -1,4 +1,4 @@
-namespace Sysprog1.Services
+namespace Sysprog2.Services
 {
     public class NameResolver
     {

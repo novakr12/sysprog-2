@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sysprog-1", "sysprog-1.csproj", "{74DDACDA-1F5B-E81C-D2A2-519CB0760AE0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sysprog-2", "sysprog-2.csproj", "{74DDACDA-1F5B-E81C-D2A2-519CB0760AE0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

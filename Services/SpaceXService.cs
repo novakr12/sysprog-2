@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
-using Sysprog1.Models;
+using Sysprog2.Models;
 
-namespace Sysprog1.Services
+namespace Sysprog2.Services
 {
     public class ApiService
     {

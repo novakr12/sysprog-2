@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Sysprog1.Models
+namespace Sysprog2.Models
 {
     public class Rocket
     {

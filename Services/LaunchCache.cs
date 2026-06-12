@@ -1,4 +1,3 @@
-using System.Threading;
 using Sysprog2.Models;
 
 namespace Sysprog2.Services
@@ -13,7 +12,7 @@ namespace Sysprog2.Services
         }
 
         private readonly Dictionary<string, CacheEntry> _cache = new();
-        private readonly HashSet<string> _inProgress = new();
+        private readonly Dictionary<string, Task<List<LaunchSummary>>> _inFlight = new();
         private readonly object _lock = new object();
         private readonly TimeSpan _duration;
         private readonly Logger _logger;
@@ -24,62 +23,54 @@ namespace Sysprog2.Services
             _logger = logger;
         }
 
-        public List<LaunchSummary> GetOrFetch(string key, Func<List<LaunchSummary>> fetchFunc)
+        public Task<List<LaunchSummary>> GetOrFetchAsync(string key, Func<Task<List<LaunchSummary>>> fetchFunc)
         {
             lock (_lock)
             {
-                // Brza provera - keš hit
                 if (_cache.TryGetValue(key, out var entry) && !entry.IsExpired(_duration))
                 {
                     _logger.Cache($"HIT: '{key}'");
-                    return entry.Data;
+                    return Task.FromResult(entry.Data);
                 }
 
-                // Prevencija stampeda: ako neka nit već fetuje isti ključ, čekaj
-                while (_inProgress.Contains(key))
+                if (_inFlight.TryGetValue(key, out var pending))
                 {
-                    _logger.Cache($"WAIT (stampede prevention): '{key}'");
-                    Monitor.Wait(_lock);
+                    _logger.Cache($"JOIN in-flight (stampede prevention): '{key}'");
+                    return pending;
                 }
 
-                // Ponovna provera nakon čekanja (druga nit je možda popunila keš)
-                if (_cache.TryGetValue(key, out entry) && !entry.IsExpired(_duration))
-                {
-                    _logger.Cache($"HIT after wait: '{key}'");
-                    return entry.Data;
-                }
-
-                // Ova nit preuzima odgovornost za fetch
-                _inProgress.Add(key);
                 _logger.Cache($"MISS - preuzimanje podataka za: '{key}'");
+                var task = FetchAndStoreAsync(key, fetchFunc);
+                _inFlight[key] = task;
+                return task;
             }
+        }
 
-            // Fetch se izvršava van locka da ne bi blokirao ostale niti za druge ključeve
-            List<LaunchSummary> data;
+        private async Task<List<LaunchSummary>> FetchAndStoreAsync(
+            string key, Func<Task<List<LaunchSummary>>> fetchFunc)
+        {
             try
             {
-                data = fetchFunc();
+                var data = await fetchFunc();
+
+                lock (_lock)
+                {
+                    _cache[key] = new CacheEntry { Data = data, Timestamp = DateTime.Now };
+                    _inFlight.Remove(key);
+                    _logger.Cache($"STORED: '{key}' ({data.Count} letova), ističe za {_duration.TotalSeconds}s");
+                }
+
+                return data;
             }
             catch (Exception ex)
             {
                 lock (_lock)
                 {
-                    _inProgress.Remove(key);
-                    Monitor.PulseAll(_lock);  // probudi čekajuće niti da prime grešku
+                    _inFlight.Remove(key);
                 }
                 _logger.Error($"Greška pri preuzimanju '{key}': {ex.Message}");
                 throw;
             }
-
-            lock (_lock)
-            {
-                _cache[key] = new CacheEntry { Data = data, Timestamp = DateTime.Now };
-                _inProgress.Remove(key);
-                Monitor.PulseAll(_lock);  // probudi sve niti koje su čekale ovaj ključ
-                _logger.Cache($"STORED: '{key}' ({data.Count} letova), ističe za {_duration.TotalSeconds}s");
-            }
-
-            return data;
         }
     }
 }

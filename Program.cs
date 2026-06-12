@@ -5,7 +5,7 @@ namespace Sysprog2
 {
     class Program
     {
-        private const int WorkerCount = 4;
+        private const int MaxParallelism = 4;
         private const int QueueMaxSize = 200;
         private const int CacheDurationSeconds = 10;
 
@@ -18,16 +18,33 @@ namespace Sysprog2
             var apiService = new ApiService(httpClient);
 
             logger.Info("Preuzimanje naziva raketa i lansirnih mesta...");
-            var rocketNames = apiService.FetchRocketNames();
-            var launchpadNames = apiService.FetchLaunchpadNames();
-            var nameResolver = new NameResolver(rocketNames, launchpadNames);
-            logger.Info($"Učitano {rocketNames.Count} raketa i {launchpadNames.Count} lansirnih mesta.");
+
+            var rocketsTask = apiService.FetchRocketNamesAsync();
+            var launchpadsTask = apiService.FetchLaunchpadNamesAsync();
+
+            NameResolver nameResolver;
+            try
+            {
+                nameResolver = Task.WhenAll(rocketsTask, launchpadsTask).ContinueWith(_ =>
+                {
+                    var resolver = new NameResolver(rocketsTask.Result, launchpadsTask.Result);
+                    logger.Info($"Učitano {rocketsTask.Result.Count} raketa i {launchpadsTask.Result.Count} lansirnih mesta.");
+                    return resolver;
+                }).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                var reason = (ex as AggregateException)?.GetBaseException().Message ?? ex.Message;
+                logger.Error($"Nije moguće preuzeti podatke sa SpaceX API-a: {reason}");
+                logger.Error("Server se ne pokreće. Proverite mrežnu vezu i dostupnost API-a, pa pokušajte ponovo.");
+                return;
+            }
 
             var cache = new LaunchCache(TimeSpan.FromSeconds(CacheDurationSeconds), logger);
             var handler = new RequestHandler(apiService, cache, logger, nameResolver);
-            var workerPool = new WorkerPool(WorkerCount, queue, handler, logger);
+            var dispatcher = new Dispatcher(MaxParallelism, queue, handler, logger);
 
-            workerPool.Start();
+            dispatcher.Start();
 
             using var listener = new HttpListener();
             listener.Prefixes.Add("http://localhost:5000/");
@@ -36,7 +53,7 @@ namespace Sysprog2
             {
                 listener.Start();
                 logger.Info("Server sluša na http://localhost:5000/");
-                logger.Info($"Radne niti: {WorkerCount} | Red čekanja: {QueueMaxSize} | Keš TTL: {CacheDurationSeconds}s");
+                logger.Info($"Maks. paralelnih obrada: {MaxParallelism} | Red čekanja: {QueueMaxSize} | Keš TTL: {CacheDurationSeconds}s");
                 logger.Info("Pritisnite Ctrl+C za zaustavljanje.");
             }
             catch (Exception ex)
@@ -50,15 +67,14 @@ namespace Sysprog2
                 e.Cancel = true;
                 logger.Info("Gašenje servera...");
                 listener.Stop();
-                workerPool.Stop();
+                dispatcher.Stop();
             };
 
-            // Glavna nit = producer: prima zahteve i stavlja ih u red
             while (listener.IsListening)
             {
                 try
                 {
-                    var context = listener.GetContext();  // blokira dok ne stigne zahtev
+                    var context = listener.GetContext();
 
                     if (!queue.Enqueue(context))
                     {

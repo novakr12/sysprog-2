@@ -17,7 +17,6 @@ namespace Sysprog2.Services
             _logger = logger;
         }
 
-        // Producer: HTTP listener dodaje zahteve
         public bool Enqueue(HttpListenerContext context)
         {
             lock (_lock)
@@ -33,12 +32,11 @@ namespace Sysprog2.Services
 
                 _queue.Enqueue(context);
                 _logger.Info($"Zahtev dodat u red. Veličina reda: {_queue.Count}");
-                Monitor.Pulse(_lock);  // probudi jednog radnika
+                Monitor.Pulse(_lock);
                 return true;
             }
         }
 
-        // Consumer: radna nit uzima zahtev; blokira ako je red prazan
         public HttpListenerContext? Dequeue()
         {
             lock (_lock)
@@ -60,7 +58,7 @@ namespace Sysprog2.Services
             lock (_lock)
             {
                 _stopped = true;
-                Monitor.PulseAll(_lock);  // probudi sve radnike da se ugase
+                Monitor.PulseAll(_lock);
             }
         }
     }

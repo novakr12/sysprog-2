@@ -17,26 +17,25 @@ namespace Sysprog2.Services
             _httpClient = httpClient;
         }
 
-        private List<T> FetchList<T>(string url)
+        private async Task<List<T>> FetchListAsync<T>(string url)
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            using var response = _httpClient.Send(request);
+            using var response = await _httpClient.GetAsync(url);
 
             if (!response.IsSuccessStatusCode)
                 throw new Exception($"SpaceX API greška: {response.ReasonPhrase}");
 
-            using var reader = new StreamReader(response.Content.ReadAsStream());
-            string body = reader.ReadToEnd();
+            string body = await response.Content.ReadAsStringAsync();
 
             return JsonConvert.DeserializeObject<List<T>>(body) ?? new List<T>();
         }
 
-        public List<LaunchSummary> FetchLaunches(string url) => FetchList<LaunchSummary>(url);
+        public Task<List<LaunchSummary>> FetchLaunchesAsync(string url) =>
+            FetchListAsync<LaunchSummary>(url);
 
-        public Dictionary<string, string> FetchRocketNames() =>
-            FetchList<Rocket>(RocketsUrl).ToDictionary(r => r.Id, r => r.Name);
+        public async Task<Dictionary<string, string>> FetchRocketNamesAsync() =>
+            (await FetchListAsync<Rocket>(RocketsUrl)).ToDictionary(r => r.Id, r => r.Name);
 
-        public Dictionary<string, string> FetchLaunchpadNames() =>
-            FetchList<Launchpad>(LaunchpadsUrl).ToDictionary(p => p.Id, p => p.Name);
+        public async Task<Dictionary<string, string>> FetchLaunchpadNamesAsync() =>
+            (await FetchListAsync<Launchpad>(LaunchpadsUrl)).ToDictionary(p => p.Id, p => p.Name);
     }
 }

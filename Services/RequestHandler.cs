@@ -29,7 +29,7 @@ namespace Sysprog2.Services
             _nameResolver = nameResolver;
         }
 
-        public void Handle(HttpListenerContext context)
+        public async Task HandleAsync(HttpListenerContext context)
         {
             var request = context.Request;
             var response = context.Response;
@@ -53,7 +53,7 @@ namespace Sysprog2.Services
                 string url = upcoming == true ? ApiService.UpcomingUrl : ApiService.PastUrl;
                 string cacheKey = upcoming == true ? "upcoming" : "past";
 
-                var allLaunches = _cache.GetOrFetch(cacheKey, () => _apiService.FetchLaunches(url));
+                var allLaunches = await _cache.GetOrFetchAsync(cacheKey, () => _apiService.FetchLaunchesAsync(url));
 
                 var results = allLaunches
                     .Where(l =>
@@ -101,12 +101,18 @@ namespace Sysprog2.Services
             catch (Exception ex)
             {
                 _logger.Error($"Greška pri obradi zahteva: {ex.Message}");
-                try { SendResponse(response, HttpStatusCode.InternalServerError, new { error = $"Interna greška: {ex.Message}" }); } catch { }
+                throw;
             }
-            finally
+        }
+
+        public static void SendError(HttpListenerContext context, Exception ex)
+        {
+            try
             {
-                response.Close();
+                SendResponse(context.Response, HttpStatusCode.InternalServerError,
+                    new { error = $"Interna greška: {ex.Message}" });
             }
+            catch { }
         }
 
         private bool TryParseParams(

@@ -7,10 +7,17 @@ namespace Sysprog2.Services
     {
         private readonly HttpClient _httpClient;
 
-        public const string PastUrl = "https://api.spacexdata.com/v5/launches/past";
-        public const string UpcomingUrl = "https://api.spacexdata.com/v5/launches/upcoming";
-        private const string RocketsUrl = "https://api.spacexdata.com/v4/rockets";
-        private const string LaunchpadsUrl = "https://api.spacexdata.com/v4/launchpads";
+        // Originalni SpaceX API (trenutno ne radi - server ne odgovara). Vrati ove ako proradi:
+        // public const string PastUrl = "https://api.spacexdata.com/v5/launches/past";
+        // public const string UpcomingUrl = "https://api.spacexdata.com/v5/launches/upcoming";
+        // private const string RocketsUrl = "https://api.spacexdata.com/v4/rockets";
+        // private const string LaunchpadsUrl = "https://api.spacexdata.com/v4/launchpads";
+
+        // Lokalni mock (pokreni: cd mock-api && python3 -m http.server 8000)
+        public const string PastUrl = "http://localhost:8000/past.json";
+        public const string UpcomingUrl = "http://localhost:8000/upcoming.json";
+        private const string RocketsUrl = "http://localhost:8000/rockets.json";
+        private const string LaunchpadsUrl = "http://localhost:8000/launchpads.json";
 
         public ApiService(HttpClient httpClient)
         {

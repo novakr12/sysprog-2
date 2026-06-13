@@ -1,7 +1,5 @@
 {
   "pythonPath": "/usr/bin/python3",
   "pythonVersion": "3.14",
-  "extraPaths": [
-    "/home/ognjen/.local/lib/python3.14/site-packages"
-  ]
+  "extraPaths": ["~/.local/lib/python3.14/site-packages"],
 }

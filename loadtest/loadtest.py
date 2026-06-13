@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 # === ARGUMENTI ===
 parser = argparse.ArgumentParser(description="Load test + grafik latencije za sysprog-2 server.")
-parser.add_argument("--url", default="http://localhost:5000/launches", help="ciljni URL")
+parser.add_argument("--url", default="http://localhost:5001/launches", help="ciljni URL")
 parser.add_argument("-n", "--requests", type=int, default=200, help="ukupan broj zahteva")
 parser.add_argument("-c", "--concurrency", type=int, default=50, help="broj paralelnih zahteva")
 args = parser.parse_args()
